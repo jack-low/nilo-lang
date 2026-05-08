@@ -4,6 +4,8 @@ Nilo is a small programming language project focused on readable syntax, simple 
 
 The current implementation is an alpha interpreter written in Python with no runtime dependencies.
 
+Japanese documentation is available in [README.ja.md](README.ja.md).
+
 ## Features
 
 - Variables with `let`
@@ -12,7 +14,7 @@ The current implementation is an alpha interpreter written in Python with no run
 - Maps, property access, `if` / `else`, `while`, and `for ... in`
 - Lightweight record-style `type` declarations
 - File modules with `export`, `import`, and `from ... import ...`
-- Standard modules such as `std/json`, `std/fs`, `std/http`, `std/time`
+- Standard modules such as `std/json`, `std/regex`, `std/fs`, `std/http`, `std/time`
 - CLI runner, REPL, project init, test runner, token dump, and AST dump
 
 ## Quick Start
@@ -44,6 +46,7 @@ python3 -m nilo ast examples/main.nilo
 from "math_tools" import add, sum_to;
 import "messages" as messages;
 import "std/json" as json;
+import "std/regex" as regex;
 
 let total = add(10, 20);
 let payload = {"name": "nilo", "total": total};
@@ -51,7 +54,38 @@ print(messages.banner);
 print(total);
 print(sum_to(5));
 print(json.stringify(payload));
+print(regex.is_match("^[a-z]+$", "nilo"));
 ```
+
+## Regular Expressions
+
+`std/regex` provides a practical regular expression API backed by Python's regex engine:
+
+```nilo
+import "std/regex" as regex;
+
+let email = regex.find("(?P<user>[\\w.]+)@(?P<host>[\\w.]+)", "dev@example.com");
+print(email.named.user);
+
+let words = regex.find_all("\\w+", "Nilo speaks many languages");
+print(len(words));
+
+let slug = regex.replace("\\s+", "Nilo Language", "-");
+print(slug);
+```
+
+Available functions:
+
+- `compile(pattern, flags?)`
+- `is_match(pattern, text, flags?)`
+- `find(pattern, text, flags?)`
+- `find_all(pattern, text, flags?)`
+- `captures(pattern, text, flags?)`
+- `replace(pattern, text, replacement, flags?)`
+- `split(pattern, text, flags?)`
+- `escape(text)`
+
+Flags are available under `regex.flags`, such as `ignore_case`, `multiline`, `dot_all`, `verbose`, and `ascii`.
 
 `examples/math_tools.nilo`:
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 import time
 from typing import Any, Callable
 from urllib import error, request
@@ -91,6 +92,27 @@ class StructType:
 
     def __repr__(self) -> str:
         return f"<type {self.name}>"
+
+
+class RegexPattern:
+    def __init__(self, pattern: str, flags: int = 0):
+        self.pattern = pattern
+        self.flags = flags
+        try:
+            self.compiled = re.compile(pattern, flags)
+        except re.error as exc:
+            raise RuntimeError(f"invalid regex pattern: {exc}") from exc
+
+    def call(self, _interpreter: Interpreter, args: list[Any]) -> Any:
+        if len(args) != 1:
+            raise RuntimeError(f"regex pattern expected 1 arg, got {len(args)}")
+        return self.match(args[0]) is not None
+
+    def match(self, text: Any):
+        return self.compiled.search(str(text))
+
+    def __repr__(self) -> str:
+        return f"<regex {self.pattern!r}>"
 
 
 class Interpreter:
@@ -243,6 +265,23 @@ class Interpreter:
                 "parse": BuiltinFunction("json.parse", lambda args: json.loads(args[0]), 1),
                 "stringify": BuiltinFunction("json.stringify", lambda args: json.dumps(args[0]), 1),
             },
+            "std/regex": {
+                "compile": BuiltinFunction("regex.compile", self._regex_compile, None),
+                "is_match": BuiltinFunction("regex.is_match", self._regex_is_match, None),
+                "find": BuiltinFunction("regex.find", self._regex_find, None),
+                "find_all": BuiltinFunction("regex.find_all", self._regex_find_all, None),
+                "captures": BuiltinFunction("regex.captures", self._regex_captures, None),
+                "replace": BuiltinFunction("regex.replace", self._regex_replace, None),
+                "split": BuiltinFunction("regex.split", self._regex_split, None),
+                "escape": BuiltinFunction("regex.escape", lambda args: re.escape(str(args[0])), 1),
+                "flags": {
+                    "ignore_case": re.IGNORECASE,
+                    "multiline": re.MULTILINE,
+                    "dot_all": re.DOTALL,
+                    "verbose": re.VERBOSE,
+                    "ascii": re.ASCII,
+                },
+            },
             "std/fs": {
                 "read_text": BuiltinFunction("fs.read_text", lambda args: Path(args[0]).read_text(encoding="utf-8"), 1),
                 "write_text": BuiltinFunction("fs.write_text", self._fs_write_text, 2),
@@ -292,6 +331,76 @@ class Interpreter:
     def _fs_write_text(self, args: list[Any]) -> Any:
         Path(args[0]).write_text(str(args[1]), encoding="utf-8")
         return None
+
+    def _regex_compile(self, args: list[Any]) -> RegexPattern:
+        if not 1 <= len(args) <= 2:
+            raise RuntimeError(f"regex.compile expected 1 or 2 args, got {len(args)}")
+        return RegexPattern(str(args[0]), self._regex_flags(args[1] if len(args) == 2 else 0))
+
+    def _regex_is_match(self, args: list[Any]) -> bool:
+        if not 2 <= len(args) <= 3:
+            raise RuntimeError(f"regex.is_match expected 2 or 3 args, got {len(args)}")
+        return self._regex(args[0], args[2] if len(args) == 3 else 0).match(args[1]) is not None
+
+    def _regex_find(self, args: list[Any]) -> dict[str, Any] | None:
+        if not 2 <= len(args) <= 3:
+            raise RuntimeError(f"regex.find expected 2 or 3 args, got {len(args)}")
+        match = self._regex(args[0], args[2] if len(args) == 3 else 0).match(args[1])
+        return self._regex_match(match) if match else None
+
+    def _regex_find_all(self, args: list[Any]) -> list[dict[str, Any]]:
+        if not 2 <= len(args) <= 3:
+            raise RuntimeError(f"regex.find_all expected 2 or 3 args, got {len(args)}")
+        pattern = self._regex(args[0], args[2] if len(args) == 3 else 0)
+        return [self._regex_match(match) for match in pattern.compiled.finditer(str(args[1]))]
+
+    def _regex_captures(self, args: list[Any]) -> dict[str, Any] | None:
+        if not 2 <= len(args) <= 3:
+            raise RuntimeError(f"regex.captures expected 2 or 3 args, got {len(args)}")
+        match = self._regex(args[0], args[2] if len(args) == 3 else 0).match(args[1])
+        if not match:
+            return None
+        return {
+            "match": match.group(0),
+            "groups": list(match.groups()),
+            "named": match.groupdict(),
+        }
+
+    def _regex_replace(self, args: list[Any]) -> str:
+        if not 3 <= len(args) <= 4:
+            raise RuntimeError(f"regex.replace expected 3 or 4 args, got {len(args)}")
+        pattern = self._regex(args[0], args[3] if len(args) == 4 else 0)
+        return pattern.compiled.sub(str(args[2]), str(args[1]))
+
+    def _regex_split(self, args: list[Any]) -> list[str]:
+        if not 2 <= len(args) <= 3:
+            raise RuntimeError(f"regex.split expected 2 or 3 args, got {len(args)}")
+        pattern = self._regex(args[0], args[2] if len(args) == 3 else 0)
+        return pattern.compiled.split(str(args[1]))
+
+    def _regex(self, pattern: Any, flags: Any = 0) -> RegexPattern:
+        if isinstance(pattern, RegexPattern):
+            return pattern
+        return RegexPattern(str(pattern), self._regex_flags(flags))
+
+    def _regex_flags(self, flags: Any) -> int:
+        if flags is None:
+            return 0
+        if isinstance(flags, list):
+            value = 0
+            for flag in flags:
+                value |= int(flag)
+            return value
+        return int(flags)
+
+    def _regex_match(self, match: re.Match) -> dict[str, Any]:
+        return {
+            "text": match.group(0),
+            "start": match.start(),
+            "end": match.end(),
+            "groups": list(match.groups()),
+            "named": match.groupdict(),
+        }
 
     def _http_request(self, method: str, args: list[Any]) -> dict[str, Any]:
         if not args:

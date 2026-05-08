@@ -1,5 +1,6 @@
 from "../examples/math_tools" import add, sum_to;
 import "std/json" as json;
+import "std/regex" as regex;
 
 let values = [1, 2, 3];
 let total = 0;
@@ -18,3 +19,22 @@ if (sum_to(5) != 15) {
 
 let data = json.parse("{\"name\":\"nilo\"}");
 print(data.name);
+
+if (!regex.is_match("^[a-z]+$", "nilo")) {
+    print("regex is_match failed");
+}
+
+let email = regex.captures("(?P<user>[\\w.]+)@(?P<host>[\\w.]+)", "dev@example.com");
+if (email.named.user != "dev") {
+    print("regex named capture failed");
+}
+
+let words = regex.find_all("\\w+", "Nilo speaks many languages");
+if (len(words) != 4) {
+    print("regex find_all failed");
+}
+
+let normalized = regex.replace("\\s+", "Nilo Language", "-");
+if (normalized != "Nilo-Language") {
+    print("regex replace failed");
+}

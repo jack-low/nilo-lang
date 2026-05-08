@@ -1,6 +1,7 @@
 from "math_tools" import add, sum_to;
 import "messages" as messages;
 import "std/json" as json;
+import "std/regex" as regex;
 
 type Point {
     x: int;
@@ -21,3 +22,4 @@ for value in values {
 }
 
 print(json.stringify(payload));
+print(regex.is_match("^[a-z]+$", "nilo"));
