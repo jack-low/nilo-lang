@@ -1,0 +1,23 @@
+from "math_tools" import add, sum_to;
+import "messages" as messages;
+import "std/json" as json;
+
+type Point {
+    x: int;
+    y: int;
+}
+
+let point = Point(3, 4);
+let values = [1, 2, 3];
+let payload = {"name": "nilo", "score": 7};
+
+print(messages.banner);
+print(add(point.x, point.y));
+print(sum_to(5));
+print(len(values));
+
+for value in values {
+    print(value);
+}
+
+print(json.stringify(payload));

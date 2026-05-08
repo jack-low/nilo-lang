@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.DS_Store
+.pytest_cache/
+.venv/
+build/
+dist/
+my-app/
+
+# Legacy PLY prototype artifacts kept locally only.
+example.py
+parser_demo.py
+parser.out
+parsetab.py

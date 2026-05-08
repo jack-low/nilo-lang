@@ -1,0 +1,20 @@
+from "../examples/math_tools" import add, sum_to;
+import "std/json" as json;
+
+let values = [1, 2, 3];
+let total = 0;
+
+for value in values {
+    total = total + value;
+}
+
+if (add(total, 4) != 10) {
+    print("add failed");
+}
+
+if (sum_to(5) != 15) {
+    print("sum_to failed");
+}
+
+let data = json.parse("{\"name\":\"nilo\"}");
+print(data.name);

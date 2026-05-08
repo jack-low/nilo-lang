@@ -1,0 +1,9 @@
+[package]
+name = "example-package"
+version = "0.1.0"
+description = "Example Nilo package manifest."
+entry = "examples/main.nilo"
+
+[exports]
+math_tools = "examples/math_tools.nilo"
+messages = "examples/messages.nilo"
